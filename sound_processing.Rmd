@@ -1,0 +1,204 @@
+title: "Sound processing in R | tuneR"
+author: "Kohl Kinning"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_notebook:
+    fig_height: 4
+    theme: cosmo
+    toc: yes
+    toc_float:
+      collapsed: yes
+---
+
+```{r}
+library(tuneR)
+library(pastecs)
+```
+
+```{r}
+x <- seq(0, 2*pi, length = 44100)
+channel <- round(32000 * sin(440 * x))
+Wobj <- Wave(left = channel)
+Wobj
+```
+
+```{r}
+freq<-440
+samp.rate <- 44100
+rough_440<-sawtooth(freq, duration = (10*samp.rate), from = 0, samp.rate = 44100, bit = 1, stereo = FALSE, xunit = c("samples", "time"),reverse = FALSE)
+writeWave(rough_440, "~/Desktop/sawtooth.wav")
+```
+
+```{r}
+freq<-440
+sine_440<-sine(freq, duration = samp.rate, from = 0, samp.rate = 44100,bit = 1, stereo = FALSE, xunit = c("samples", "time"))
+writeWave(sine_440, "~/Desktop/sine")
+```
+
+
+Perfect fifth
+
+```{r}
+one <- sine(440)
+two <- sine(659.26/440)
+plot(one)
+lines(two)
+```
+
+```{r}
+notes <- noteFromFF(x, diapason = 440, roundshift = 0)
+energy <- rep(100, length(notes))
+observed <- quantize(notes, energy, parts=100)
+quantplot(observed)
+```
+
+
+
+```{r}
+# constructing a mono Wave object (2 sec.) containing sinus
+# sound with 440Hz and folled by 220Hz:
+Wobj <- bind(sine(440), sine(220))
+show(Wobj)
+plot(Wobj) # it does not make sense to plot the whole stuff
+plot(extractWave(Wobj, from = 1, to = 500))
+writeWave(Wobj, "~/Desktop/two.wav")
+```
+
+```{r}
+Wobjm <- mono(Wobj, "left") # extract the left channel
+# and downsample to 11025 samples/sec.:
+Wobjm11 <- downsample(Wobjm, 11025)
+# extract a part of the signal
+Wobjm11s <- extractWave(Wobjm11, from=1000, to=17000)
+
+# calculating periodograms of sections each consisting of 1024 observations,
+# overlapping by 512 observations:
+WspecObject <- periodogram(Wobjm11s, normalize = TRUE, width = 1024, overlap = 512)
+# Let's look at the first periodogram:
+plot(WspecObject, xlim = c(0, 2000), which = 1)
+# or a spectrogram
+image(WspecObject, ylim = c(0, 1000))
+# calculate the fundamental frequency:
+ff <- FF(WspecObject)
+print(ff)
+# derive note from FF given diapason a'=440
+notes <- noteFromFF(ff, 440)
+# smooth the notes:
+snotes <- smoother(notes)
+# outcome should be 0 for diapason "a'" and -12 (12 halftones lower) for "a"
+print(snotes)
+# plot melody and energy of the sound:
+melodyplot(WspecObject, snotes)
+
+# apply some quantization (into 8 parts):
+qnotes <- quantize(snotes, WspecObject@energy, parts = 8)
+# an plot it, 4 parts a bar (including expected values):
+quantplot(qnotes, expected = rep(c(0, -12), each = 4), bars = 2)
+# now prepare for LilyPond
+qlily <- quantMerge(snotes, 4, 4, 2)
+qlily
+```
+
+```{r}
+hb_song <- readMP3("~/Downloads/helplessness_blues.mp3")
+Wobjm <- mono(hb_song, "both") # extract the left channel
+# and downsample to 11025 samples/sec.:
+Wobjm11 <- downsample(Wobjm, 11025)
+
+# calculating periodograms of sections each consisting of 1024 observations,
+# overlapping by 512 observations:
+WspecObject <- periodogram(Wobjm11, normalize = TRUE, width = 1024, overlap = 512)
+# Let's look at the first periodogram:
+plot(WspecObject, xlim = c(0, 2000), which = 1)
+# or a spectrogram
+image(WspecObject, ylim = c(0, 1000))
+# calculate the fundamental frequency:
+ff <- FF(WspecObject)
+print(ff)
+# derive note from FF given diapason a'=440
+notes <- noteFromFF(ff, 440)
+# smooth the notes:
+snotes <- smoother(notes)
+# outcome should be 0 for diapason "a'" and -12 (12 halftones lower) for "a"
+print(snotes)
+# plot melody and energy of the sound:
+melodyplot(WspecObject, snotes)
+
+# apply some quantization (into 8 parts):
+qnotes <- quantize(snotes, WspecObject@energy, parts = 8)
+# an plot it, 4 parts a bar (including expected values):
+quantplot(qnotes, expected = rep(c(0, -12), each = 4), bars = 2)
+# now prepare for LilyPond
+qlily <- quantMerge(snotes, 4, 4, 2)
+qlily
+```
+
+
+
+
+
+
+
+
+
+```{r}
+ms_song <- readMP3("~/Downloads/moonlight_sonata.mp3")
+Wobjm <- mono(ms_song, "both") # extract the left channel
+# and downsample to 11025 samples/sec.:
+Wobjm11 <- downsample(Wobjm, 11025)
+
+# calculating periodograms of sections each consisting of 1024 observations,
+# overlapping by 512 observations:
+WspecObject <- periodogram(Wobjm11, normalize = TRUE, width = 1024, overlap = 512)
+# Let's look at the first periodogram:
+plot(WspecObject, xlim = c(0, 2000), which = 1)
+# or a spectrogram
+image(WspecObject, ylim = c(0, 1000))
+# calculate the fundamental frequency:
+ff <- FF(WspecObject)
+print(ff)
+# derive note from FF given diapason a'=440
+notes <- noteFromFF(ff, 440)
+# smooth the notes:
+snotes <- smoother(notes)
+# outcome should be 0 for diapason "a'" and -12 (12 halftones lower) for "a"
+print(snotes)
+# plot melody and energy of the sound:
+melodyplot(WspecObject, snotes)
+
+# apply some quantization (into 8 parts):
+qnotes <- quantize(snotes, WspecObject@energy, parts = 8)
+# an plot it, 4 parts a bar (including expected values):
+quantplot(qnotes, expected = rep(c(0, -12), each = 4), bars = 2)
+# now prepare for LilyPond
+qlily <- quantMerge(snotes, 4, 4, 2)
+qlily
+```
+
+```{r}
+rw_song <- readMP3("~/Downloads/rusting_wood.mp3")
+Wobjm <- mono(rw_song, "both") # extract the left channel
+# and downsample to 11025 samples/sec.:
+Wobjm11 <- downsample(Wobjm, 11025)
+
+# calculating periodograms of sections each consisting of 1024 observations,
+# overlapping by 512 observations:
+WspecObject <- periodogram(Wobjm11, normalize = TRUE, width = 1024, overlap = 512)
+# Let's look at the first periodogram:
+plot(WspecObject, xlim = c(0, 2000), which = 1)
+# or a spectrogram
+image(WspecObject, ylim = c(0, 1000))
+# calculate the fundamental frequency:
+ff <- FF(WspecObject)
+print(ff)
+# derive note from FF given diapason a'=440
+notes <- noteFromFF(ff, 440)
+# smooth the notes:
+snotes <- smoother(notes)
+# outcome should be 0 for diapason "a'" and -12 (12 halftones lower) for "a"
+print(snotes)
+# plot melody and energy of the sound:
+melodyplot(WspecObject, snotes)
+
+```
+
